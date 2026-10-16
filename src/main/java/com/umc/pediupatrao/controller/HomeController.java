@@ -1,17 +1,24 @@
 package com.umc.pediupatrao.controller;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.umc.pediupatrao.entity.Cliente;
 import com.umc.pediupatrao.entity.Pedido;
+import com.umc.pediupatrao.entity.StatusPedido;
+import com.umc.pediupatrao.security.UsuarioLogado;
+import com.umc.pediupatrao.service.PedidoService;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+import java.util.List;
+import com.umc.pediupatrao.entity.Perfil;
 import com.umc.pediupatrao.entity.Produto;
 import com.umc.pediupatrao.entity.Usuario;
+import com.umc.pediupatrao.exception.RecursoNaoEncontradoException;
+import com.umc.pediupatrao.exception.RegraNegocioException;
 import com.umc.pediupatrao.service.ClienteService;
-import com.umc.pediupatrao.service.PedidoService;
 import com.umc.pediupatrao.service.ProdutoService;
 import com.umc.pediupatrao.service.UsuarioService;
-import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,22 +27,27 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+/**
+ * Telas Thymeleaf de início, usuários, clientes e produtos.
+ * A autorização é feita no SecurityConfig e nos serviços (@PreAuthorize); aqui só tratamos as mensagens.
+ */
 @Controller
 public class HomeController {
 
-    private static final Logger log = LoggerFactory.getLogger(HomeController.class);
+    private final ClienteService clienteService;
+    private final ProdutoService produtoService;
+    private final UsuarioService usuarioService;
+    private final PedidoService pedidoService;
+    private final Clock clock;
 
-    @Autowired
-    private PedidoService pedidoService;
-
-    @Autowired
-    private ClienteService clienteService;
-
-    @Autowired
-    private ProdutoService produtoService;
-
-    @Autowired
-    private UsuarioService usuarioService;
+    public HomeController(ClienteService clienteService, ProdutoService produtoService,
+            UsuarioService usuarioService, PedidoService pedidoService, Clock clock) {
+        this.clienteService = clienteService;
+        this.produtoService = produtoService;
+        this.usuarioService = usuarioService;
+        this.pedidoService = pedidoService;
+        this.clock = clock;
+    }
 
     @GetMapping("/login")
     public String login() {
@@ -44,25 +56,45 @@ public class HomeController {
 
     @GetMapping("/")
     public String home(Model model) {
+        LocalDate hoje = LocalDate.now(clock);
+        List<Pedido> pedidos = UsuarioLogado.perfil().equals("SEM_PERFIL") ? List.of() : pedidoService.listarPedidos();
+        List<Pedido> deHoje = pedidos.stream()
+                .filter(p -> p.getDataHoraEntrada() != null && p.getDataHoraEntrada().toLocalDate().equals(hoje))
+                .toList();
+
+        model.addAttribute("hoje", hoje.format(DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM", Locale.of("pt", "BR"))));
+        model.addAttribute("pedidosHoje", deHoje.size());
+        model.addAttribute("emAndamento", pedidos.stream()
+                .filter(p -> p.getStatus() != null && p.getStatus().isAntesDaSaida()).count());
+        model.addAttribute("prontos", pedidos.stream().filter(p -> p.getStatus() == StatusPedido.PRONTO).count());
+        model.addAttribute("faturadoHoje", deHoje.stream()
+                .filter(p -> p.getStatus() == StatusPedido.FINALIZADO)
+                .map(Pedido::getValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
         model.addAttribute("content", "home :: content");
         return "layout";
     }
 
+    @GetMapping("/acesso-negado")
+    public String acessoNegado(Model model) {
+        model.addAttribute("content", "acesso-negado :: content");
+        return "layout";
+    }
+
     // ========================
-    // USUÁRIOS
+    // USUÁRIOS (somente ADMIN)
     // ========================
     @GetMapping("/usuarios")
     public String listarUsuarios(Model model) {
-        List<Usuario> usuarios = (List<Usuario>) usuarioService.listarTodos();
-        model.addAttribute("usuarios", usuarios);
+        model.addAttribute("usuarios", usuarioService.listarTodos());
         model.addAttribute("content", "usuarios/lista :: content");
-        log.info("Carregando fragmento: usuarios/lista :: content");
         return "layout";
     }
 
     @GetMapping("/usuarios/novo")
     public String novoUsuarioForm(Model model) {
         model.addAttribute("usuario", new Usuario());
+        model.addAttribute("perfis", Perfil.values());
         model.addAttribute("content", "usuarios/form :: content");
         return "layout";
     }
@@ -70,55 +102,51 @@ public class HomeController {
     @GetMapping("/usuarios/editar/{id}")
     public String editarUsuarioForm(@PathVariable String id, Model model,
             RedirectAttributes redirectAttributes) {
-        boolean encontrado = usuarioService.buscarPorId(id).map(u -> {
+        return usuarioService.buscarPorId(id).map(u -> {
+            u.setPassword(null); // o hash da senha não vai para o formulário
             model.addAttribute("usuario", u);
-            return true;
-        }).orElse(false);
-
-        if (!encontrado) {
+            model.addAttribute("perfis", Perfil.values());
+            model.addAttribute("content", "usuarios/form :: content");
+            return "layout";
+        }).orElseGet(() -> {
             redirectAttributes.addFlashAttribute("erro", "Usuário não encontrado.");
             return "redirect:/usuarios";
-        }
-
-        model.addAttribute("content", "usuarios/form :: content");
-        return "layout";
+        });
     }
 
     @PostMapping("/usuarios/salvar")
-    public String salvarUsuario(@ModelAttribute Usuario usuario,
-            RedirectAttributes redirectAttributes) {
-        usuarioService.salvarUsuario(usuario);
-        redirectAttributes.addFlashAttribute("sucesso", "Usuário criado com sucesso!");
+    public String salvarUsuario(@ModelAttribute Usuario usuario, RedirectAttributes redirectAttributes) {
+        try {
+            usuarioService.criarUsuario(usuario);
+            redirectAttributes.addFlashAttribute("sucesso", "Usuário criado com sucesso!");
+        } catch (RegraNegocioException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/usuarios/novo";
+        }
         return "redirect:/usuarios";
     }
 
     @PostMapping("/usuarios/editar/{id}")
-    public String atualizarUsuario(@PathVariable String id,
-            @ModelAttribute Usuario usuario,
+    public String atualizarUsuario(@PathVariable String id, @ModelAttribute Usuario usuario,
             RedirectAttributes redirectAttributes) {
-        usuarioService.atualizarUsuario(id, usuario);
-        redirectAttributes.addFlashAttribute("sucesso", "Usuário atualizado com sucesso!");
+        try {
+            usuarioService.atualizarUsuario(id, usuario);
+            redirectAttributes.addFlashAttribute("sucesso", "Usuário atualizado com sucesso!");
+        } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
         return "redirect:/usuarios";
     }
 
     @PostMapping("/usuarios/deletar/{id}")
-    public String deletarUsuario(@PathVariable String id,
-            RedirectAttributes redirectAttributes) {
-        usuarioService.deletarUsuario(id);
-        redirectAttributes.addFlashAttribute("sucesso", "Usuário removido com sucesso!");
+    public String deletarUsuario(@PathVariable String id, RedirectAttributes redirectAttributes) {
+        try {
+            usuarioService.deletarUsuario(id);
+            redirectAttributes.addFlashAttribute("sucesso", "Usuário removido com sucesso!");
+        } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
         return "redirect:/usuarios";
-    }
-
-    // ========================
-    // PEDIDOS
-    // ========================
-    @GetMapping("/pedidos")
-    public String pedidos(Model model) {
-        List<Pedido> pedidos = pedidoService.listarPedidos();
-        model.addAttribute("pedidos", pedidos);
-        model.addAttribute("content", "pedidos :: content");
-        log.info("Carregando fragmento: pedidos :: content");
-        return "layout";
     }
 
     // ========================
@@ -126,11 +154,28 @@ public class HomeController {
     // ========================
     @GetMapping("/produtos")
     public String produtos(Model model) {
-        List<Produto> produtos = produtoService.listarProdutos();
-        model.addAttribute("produtos", produtos);
+        model.addAttribute("produtos", produtoService.listarProdutos());
+        model.addAttribute("produto", new Produto());
         model.addAttribute("content", "produtos/lista :: content");
-        log.info("Carregando fragmento: produtos/lista :: content");
         return "layout";
+    }
+
+    @PostMapping("/produtos/salvar")
+    public String salvarProduto(@ModelAttribute Produto produto, RedirectAttributes redirectAttributes) {
+        try {
+            produtoService.salvar(produto);
+            redirectAttributes.addFlashAttribute("sucesso", "Produto salvo com sucesso!");
+        } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/produtos";
+    }
+
+    @PostMapping("/produtos/excluir/{id}")
+    public String excluirProduto(@PathVariable String id, RedirectAttributes redirectAttributes) {
+        produtoService.excluir(id);
+        redirectAttributes.addFlashAttribute("sucesso", "Produto removido.");
+        return "redirect:/produtos";
     }
 
     // ========================
@@ -138,10 +183,8 @@ public class HomeController {
     // ========================
     @GetMapping("/clientes")
     public String clientes(Model model) {
-        List<Cliente> clientes = clienteService.listarClientes();
-        model.addAttribute("clientes", clientes);
+        model.addAttribute("clientes", clienteService.listarClientes());
         model.addAttribute("content", "clientes/lista :: content");
-        log.info("Carregando fragmento: clientes/lista :: content");
         return "layout";
     }
 
@@ -153,56 +196,53 @@ public class HomeController {
     }
 
     @PostMapping("/clientes/salvar")
-    public String salvarCliente(@ModelAttribute Cliente cliente,
-            RedirectAttributes redirectAttributes) {
-        clienteService.salvar(cliente);
-        redirectAttributes.addFlashAttribute("sucesso", "Cliente criado com sucesso!");
+    public String salvarCliente(@ModelAttribute Cliente cliente, RedirectAttributes redirectAttributes) {
+        try {
+            cliente.setId(null);
+            clienteService.salvar(cliente);
+            redirectAttributes.addFlashAttribute("sucesso", "Cliente criado com sucesso!");
+        } catch (RegraNegocioException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/clientes/novo";
+        }
         return "redirect:/clientes";
     }
 
     @GetMapping("/clientes/editar/{id}")
     public String editarClienteForm(@PathVariable String id, Model model,
             RedirectAttributes redirectAttributes) {
-        boolean encontrado = clienteService.buscarPorId(id).map(c -> {
+        return clienteService.buscarPorId(id).map(c -> {
             model.addAttribute("cliente", c);
-            return true;
-        }).orElse(false);
-
-        if (!encontrado) {
+            model.addAttribute("content", "clientes/form :: content");
+            return "layout";
+        }).orElseGet(() -> {
             redirectAttributes.addFlashAttribute("erro", "Cliente não encontrado.");
             return "redirect:/clientes";
-        }
-
-        model.addAttribute("content", "clientes/form :: content");
-        return "layout";
+        });
     }
 
     @PostMapping("/clientes/editar/{id}")
-    public String atualizarCliente(@PathVariable String id,
-            @ModelAttribute Cliente cliente,
+    public String atualizarCliente(@PathVariable String id, @ModelAttribute Cliente cliente,
             RedirectAttributes redirectAttributes) {
-        cliente.setId(id);
-        clienteService.salvar(cliente);
-        redirectAttributes.addFlashAttribute("sucesso", "Cliente atualizado com sucesso!");
+        try {
+            cliente.setId(id);
+            clienteService.salvar(cliente);
+            redirectAttributes.addFlashAttribute("sucesso", "Cliente atualizado com sucesso!");
+        } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/clientes/editar/" + id;
+        }
         return "redirect:/clientes";
     }
 
-    // ========================
-    // OUTRAS ROTAS
-    // ========================
-    @GetMapping("/configuracoes")
-    public String configuracoes(Model model) {
-        model.addAttribute("content", "configuracoes :: content");
-        return "layout";
-    }
-
-    @GetMapping("/teste")
-    public String teste() {
-        return "teste";
-    }
-
-    @GetMapping("/admin")
-    public String admin() {
-        return "admin";
+    @PostMapping("/clientes/excluir/{id}")
+    public String excluirCliente(@PathVariable String id, RedirectAttributes redirectAttributes) {
+        try {
+            clienteService.excluir(id);
+            redirectAttributes.addFlashAttribute("sucesso", "Cliente excluído.");
+        } catch (RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/clientes";
     }
 }

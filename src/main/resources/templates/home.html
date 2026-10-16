@@ -1,16 +1,64 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>Home</title>
-</head>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
+<div th:fragment="content">
 
-<div class="container-fluid vh-100 d-flex justify-content-center align-items-center" th:fragment="content">
-    <div class="text-center">
-        <h1>Bem-vindo!!!</h1>
-        <img th:src="@{/images/logo.png}" alt="Logo" width="500" height="500">
+    <div class="cabecalho">
+        <div>
+            <h2>Olá, <span sec:authentication="name"></span></h2>
+            <div class="sub" th:text="${hoje}"></div>
+        </div>
+        <a href="/pedidos/novo" class="btn btn-primary" sec:authorize="hasAnyRole('GERENTE','ATENDENTE')">
+            <i class="bi bi-plus-lg me-1"></i>Novo pedido
+        </a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card card-body">
+                <div class="numero" th:text="${pedidosHoje}">0</div>
+                <div class="numero-legenda">pedidos hoje</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-body">
+                <div class="numero" th:text="${emAndamento}">0</div>
+                <div class="numero-legenda">em andamento</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-body">
+                <div class="numero" th:text="${prontos}">0</div>
+                <div class="numero-legenda">prontos esperando saída</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-body">
+                <div class="numero" th:text="${'R$ ' + #numbers.formatDecimal(faturadoHoje, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</div>
+                <div class="numero-legenda">finalizado hoje</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="mb-3">O que você pode fazer aqui</h5>
+            <ul class="mb-0" sec:authorize="hasRole('ADMIN')">
+                <li>Cadastrar usuários e definir o perfil de cada um</li>
+                <li>Consultar os pedidos</li>
+                <li>Ver o histórico de auditoria</li>
+            </ul>
+            <ul class="mb-0" sec:authorize="hasRole('GERENTE')">
+                <li>Acompanhar e movimentar os pedidos</li>
+                <li>Dar desconto de até 20% e cancelar pedidos (com justificativa)</li>
+                <li>Consultar clientes e ver o histórico de auditoria</li>
+            </ul>
+            <ul class="mb-0" sec:authorize="hasRole('ATENDENTE')">
+                <li>Cadastrar e atualizar clientes</li>
+                <li>Registrar pedidos e acompanhar até a entrega</li>
+            </ul>
+        </div>
     </div>
 </div>
-
 </body>
 </html>

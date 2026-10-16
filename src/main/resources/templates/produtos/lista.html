@@ -1,95 +1,82 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-    <head>
-        <meta charset="UTF-8">
-        <title>Gerenciar Produtos</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-        <link rel="stylesheet" th:href="@{/css/style.css}">
-    </head>
-    <body>
-        <!-- Sidebar incluído como fragmento -->
-        <aside>
-            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
-        </aside>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Gerenciar Produtos</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="cabecalho">
+        <h2 class="mb-0">Cardápio</h2>
+        <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#formularioProduto"
+                sec:authorize="hasAnyRole('ADMIN','GERENTE')">
+            <i class="bi bi-plus-lg me-1"></i> Novo item
+        </button>
+    </div>
 
-        <div class="container mt-5">
-            <h1 class="mb-4">Gestão de Produtos</h1>
+    <div th:replace="~{fragments/alertas :: alertas}"></div>
 
-            <!-- Botão para abrir o formulário -->
-            <button class="btn btn-primary mb-3" data-bs-toggle="collapse" data-bs-target="#formularioProduto">
-                Novo Produto
-            </button>
-
-            <!-- Formulário de Cadastro -->
-            <div class="collapse" id="formularioProduto">
-                <div class="card card-body">
-                    <form th:action="@{/api/produtos}" method="post" id="produtoForm">
-                        <div class="mb-3">
-                            <label for="nome" class="form-label">Nome do Produto</label>
-                            <input type="text" id="nome" name="nome" class="form-control" placeholder="Nome do Produto" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="tipo" class="form-label">Tipo do Produto</label>
-                            <select id="tipo" name="tipo" class="form-select" required>
-                                <option value="" disabled selected>Selecione o Tipo</option>
-                                <option value="Pizza">Pizza</option>
-                                <option value="Lanche">Lanche</option>
-                                <option value="Bebida">Bebida</option>
-                                <option value="Porção">Porção</option>
-                                <option value="Adicional">Adicional</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="preco" class="form-label">Preço</label>
-                            <input type="number" id="preco" name="preco" class="form-control" placeholder="Preço (R$)" step="0.01" required>
-                        </div>
-
-                        <div class="form-check mb-3">
-                            <input type="checkbox" id="ativo" name="ativo" class="form-check-input">
-                            <label for="ativo" class="form-check-label">Produto Ativo</label>
-                        </div>
-
-                        <div class="d-flex justify-content-end">
-                            <button type="submit" class="btn btn-success">Salvar</button>
-                        </div>
-                    </form>
+    <!-- Formulário de Cadastro (ADMIN e GERENTE) -->
+    <div class="collapse mb-3" id="formularioProduto" sec:authorize="hasAnyRole('ADMIN','GERENTE')">
+        <div class="card card-body" style="max-width: 600px;">
+            <form th:action="@{/produtos/salvar}" th:object="${produto}" method="post">
+                <div class="mb-3">
+                    <label for="nome" class="form-label">Nome do Produto</label>
+                    <input type="text" id="nome" th:field="*{nome}" class="form-control" required>
                 </div>
-            </div>
+                <div class="mb-3">
+                    <label for="tipo" class="form-label">Tipo do Produto</label>
+                    <select id="tipo" th:field="*{tipo}" class="form-select" required>
+                        <option value="" disabled>Selecione o Tipo</option>
+                        <option value="Pizza">Pizza</option>
+                        <option value="Lanche">Lanche</option>
+                        <option value="Bebida">Bebida</option>
+                        <option value="Porção">Porção</option>
+                        <option value="Adicional">Adicional</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="preco" class="form-label">Preço (R$)</label>
+                    <input type="number" id="preco" th:field="*{preco}" class="form-control" step="0.01" min="0" required>
+                </div>
+                <div class="form-check mb-3">
+                    <input type="checkbox" id="ativo" th:field="*{ativo}" class="form-check-input">
+                    <label for="ativo" class="form-check-label">Produto Ativo</label>
+                </div>
+                <button type="submit" class="btn btn-success">Salvar</button>
+            </form>
+        </div>
+    </div>
 
-            <!-- Listagem de Produtos -->
-            <table class="table table-bordered table-striped mt-3">
-                <thead class="table-dark">
+    <!-- Listagem de Produtos -->
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
+                        <th class="ps-4">Nome</th>
                         <th>Tipo</th>
-                        <th>Preço</th>
+                        <th class="text-end">Preço</th>
                         <th>Ativo</th>
-                        <th>Ações</th>
+                        <th class="text-end pe-4" sec:authorize="hasAnyRole('ADMIN','GERENTE')">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Loop para listar os produtos -->
-                    <tr th:each="produto : ${produtos}">
-                        <td th:text="${produto.id}"></td>
-                        <td th:text="${produto.nome}"></td>
-                        <td th:text="${produto.tipo}"></td>
-                        <td th:text="${#numbers.formatDecimal(produto.preco, 1, 'COMMA', 2, 'POINT')}"></td>
-                        <td th:text="${produto.ativo ? 'Sim' : 'Não'}">Sim</td>
-                        <td>
-                            <a th:href="@{/api/produtos/{id}(id=${produto.id})}" class="btn btn-warning btn-sm">Editar</a>
-                            <a th:href="@{/api/produtos/{id}(id=${produto.id})}" class="btn btn-danger btn-sm" 
-                               onclick="return confirm('Tem certeza que deseja excluir este produto?');">
-                                Excluir
-                            </a>
+                    <tr th:each="p : ${produtos}">
+                        <td class="ps-4" th:text="${p.nome}"></td>
+                        <td th:text="${p.tipo}"></td>
+                        <td class="text-end" th:text="${p.preco != null} ? ${'R$ ' + #numbers.formatDecimal(p.preco, 1, 'POINT', 2, 'COMMA')} : '-'"></td>
+                        <td th:text="${p.ativo != null and p.ativo} ? 'Sim' : 'Não'"></td>
+                        <td class="text-end pe-4" sec:authorize="hasAnyRole('ADMIN','GERENTE')">
+                            <form th:action="@{/produtos/excluir/{id}(id=${p.id})}" method="post" class="d-inline"
+                                  onsubmit="return confirm('Tem certeza que deseja excluir este produto?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i> Excluir</button>
+                            </form>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        <script th:src="@{/js/script.js}"></script>
-    </body>
+    </div>
+</div>
+</body>
 </html>

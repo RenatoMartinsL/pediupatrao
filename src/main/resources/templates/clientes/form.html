@@ -11,12 +11,14 @@
         <a href="/clientes" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left"></i>
         </a>
-        <h2 class="fw-bold mb-0">
+        <h2 class="mb-0">
             <span th:text="${cliente.id != null} ? 'Editar Cliente' : 'Novo Cliente'"></span>
         </h2>
     </div>
 
-    <div class="card shadow-sm" style="max-width: 600px;">
+    <div th:replace="~{fragments/alertas :: alertas}"></div>
+
+    <div class="card" style="max-width: 600px;">
         <div class="card-body p-4">
 
             <form th:action="${cliente.id != null}

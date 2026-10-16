@@ -11,12 +11,14 @@
         <a href="/usuarios" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left"></i>
         </a>
-        <h2 class="fw-bold mb-0">
+        <h2 class="mb-0">
             <span th:text="${usuario.id != null} ? 'Editar Usuário' : 'Novo Usuário'"></span>
         </h2>
     </div>
 
-    <div class="card shadow-sm" style="max-width: 540px;">
+    <div th:replace="~{fragments/alertas :: alertas}"></div>
+
+    <div class="card" style="max-width: 540px;">
         <div class="card-body p-4">
 
             <form th:action="${usuario.id != null}
@@ -43,7 +45,7 @@
                     <label for="password" class="form-label fw-medium">
                         <i class="bi bi-lock me-1"></i>Senha
                         <small class="text-muted fw-normal" th:if="${usuario.id != null}">
-                            — deixe em branco para manter a atual
+                            (deixe em branco para manter a atual)
                         </small>
                     </label>
                     <div class="input-group">
@@ -66,8 +68,7 @@
                     </label>
                     <select id="role" class="form-select" th:field="*{role}" required>
                         <option value="" disabled>Selecione um perfil</option>
-                        <option value="ADMIN">ADMIN</option>
-                        <option value="USER">USER</option>
+                        <option th:each="p : ${perfis}" th:value="${p.name()}" th:text="${p.descricao + ' (' + p.name() + ')'}"></option>
                     </select>
                 </div>
 

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Acesso negado</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="alert alert-danger mt-4" role="alert">
+        <h4 class="alert-heading"><i class="bi bi-shield-lock-fill me-2"></i>Acesso negado</h4>
+        <p class="mb-0">O seu perfil não tem permissão para esta operação. A tentativa foi bloqueada pelo servidor.</p>
+    </div>
+    <a href="/" class="btn btn-outline-secondary">Voltar ao início</a>
+</div>
+</body>
+</html>

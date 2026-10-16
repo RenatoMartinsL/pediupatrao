@@ -1,44 +1,64 @@
 package com.umc.pediupatrao.service;
 
 import com.umc.pediupatrao.entity.Produto;
+import com.umc.pediupatrao.exception.RecursoNaoEncontradoException;
+import com.umc.pediupatrao.exception.RegraNegocioException;
 import com.umc.pediupatrao.repository.ProdutoRepository;
-import org.springframework.stereotype.Service;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.Optional;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
 
 @Service
 public class ProdutoService {
 
-    @Autowired
-    private ProdutoRepository produtoRepository;
+    private final ProdutoRepository produtoRepository;
 
-    public Produto novoProduto(Produto produto) {
-        return produtoRepository.save(produto);
+    public ProdutoService(ProdutoRepository produtoRepository) {
+        this.produtoRepository = produtoRepository;
     }
 
     public List<Produto> listarProdutos() {
         return produtoRepository.findAll();
     }
 
-    // Método para excluir cliente
+    public List<Produto> listarAtivos() {
+        return produtoRepository.findAll().stream()
+                .filter(p -> Boolean.TRUE.equals(p.getAtivo()))
+                .toList();
+    }
+
+    public Optional<Produto> buscarPorId(String id) {
+        return produtoRepository.findById(id);
+    }
+
+    // Método para excluir produto
+    @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
     public void excluir(String id) {
         produtoRepository.deleteById(id);
     }
 
-
-    // Método para salvar um novo cliente ou atualizar um cliente existente
+    // Método para salvar um novo produto ou atualizar um produto existente
+    @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
     public Produto salvar(Produto produto) {
-        // Se o cliente não tem ID (novo cliente), salva como novo
-        if (produto.getId() == null) {
-            return produtoRepository.save(produto);  // Cria um novo cliente
-        } // Se já tem ID (cliente existente), atualiza
-        else {
-            // Verifica se o cliente existe antes de atualizar
-            if (produtoRepository.existsById(produto.getId())) {
-                return produtoRepository.save(produto);  // Atualiza o cliente existente
-            } else {
-                throw new IllegalArgumentException("Cliente não encontrado para atualização.");
-            }
+        if (produto.getNome() == null || produto.getNome().isBlank()) {
+            throw new RegraNegocioException("Informe o nome do produto.");
         }
+        if (produto.getPreco() == null || produto.getPreco() < 0) {
+            throw new RegraNegocioException("Informe um preço válido.");
+        }
+        if (produto.getAtivo() == null) {
+            produto.setAtivo(false);
+        }
+        // Se o produto não tem ID (novo produto), salva como novo
+        if (produto.getId() == null || produto.getId().isBlank()) {
+            produto.setId(null);
+            return produtoRepository.save(produto);
+        }
+        // Se já tem ID (produto existente), verifica se existe antes de atualizar
+        if (!produtoRepository.existsById(produto.getId())) {
+            throw new RecursoNaoEncontradoException("Produto não encontrado para atualização.");
+        }
+        return produtoRepository.save(produto);
     }
 }

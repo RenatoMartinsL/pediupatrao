@@ -1,65 +1,44 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-    <head>
-        <meta charset="UTF-8">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-    </head>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
     <body>
+        <!-- O menu só esconde o que o perfil não usa; quem bloqueia de verdade é o backend -->
         <div th:fragment="sidebar">
-            <div id="sidebar">
-                <h4 class="text-center py-3">Pediu Patrão</h4>
+            <nav id="sidebar">
+                <div class="marca">
+                    <img th:src="@{/images/logo.png}" alt="">
+                    <span>PediuPatrão</span>
+                </div>
+
+                <div class="quem" sec:authorize="isAuthenticated()">
+                    <div><i class="bi bi-person-circle me-1"></i><span sec:authentication="name"></span></div>
+                    <span class="perfil" th:text="${perfilLogado}"></span>
+                </div>
+
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a class="nav-link" th:href="@{/}" aria-current="page">
-                            <i class="bi bi-house"></i><span class="d-none d-md-inline">&nbsp;Home</span>
-                        </a>
+                        <a class="nav-link" th:href="@{/}"><i class="bi bi-house"></i>Início</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/clientes}">
-                            <i class="bi bi-person-raised-hand"></i><span class="d-none d-md-inline">&nbsp;Clientes</span>
-                        </a>
+                    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','GERENTE','ATENDENTE')">
+                        <a class="nav-link" th:href="@{/pedidos}"><i class="bi bi-receipt"></i>Pedidos</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/pedidos}">
-                            <i class="bi bi-bag"></i><span class="d-none d-md-inline">&nbsp;Pedidos</span>
-                        </a>
+                    <li class="nav-item" sec:authorize="hasAnyRole('GERENTE','ATENDENTE')">
+                        <a class="nav-link" th:href="@{/clientes}"><i class="bi bi-people"></i>Clientes</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="toggleSubmenu(event, this)">
-                            <i class="bi bi-gear"></i><span class="d-none d-md-inline">&nbsp;Configurações</span>
-                            <span class="float-end">&#9662;</span> <!-- Setinha -->
-                        </a>
-                        <ul class="nav flex-column submenu">
-                            <li class="nav-item">
-                                <a class="nav-link" th:href="@{/funcionarios}">
-                                    <i class="bi bi-person-walking"></i><span class="d-none d-md-inline">&nbsp;Funcionários</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" th:href="@{/entregadores}">
-                                    <i class="bi bi-bicycle"></i><span class="d-none d-md-inline">&nbsp;Entregadores</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" th:href="@{/horarios}">
-                                    <i class="bi bi-clock"></i><span class="d-none d-md-inline">&nbsp;Horário de Funcionamento</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" th:href="@{/produtos}">
-                                    <i class="bi bi-boxes"></i><span class="d-none d-md-inline">&nbsp;Produtos</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" th:href="@{/usuarios}">
-                                    <i class="bi bi-people-fill"></i><span class="d-none d-md-inline">&nbsp;Usuários</span>
-                                </a>
-                            </li>
+                    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','GERENTE','ATENDENTE')">
+                        <a class="nav-link" th:href="@{/produtos}"><i class="bi bi-card-list"></i>Cardápio</a>
+                    </li>
+                    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN','GERENTE')">
+                        <a class="nav-link" th:href="@{/auditoria}"><i class="bi bi-clock-history"></i>Auditoria</a>
+                    </li>
+                    <li class="nav-item" sec:authorize="hasRole('ADMIN')">
+                        <a class="nav-link" th:href="@{/usuarios}"><i class="bi bi-shield-lock"></i>Usuários</a>
                     </li>
                 </ul>
-                </li>
-                </ul>
-            </div>
+
+                <form class="sair" th:action="@{/logout}" method="post" sec:authorize="isAuthenticated()">
+                    <button type="submit"><i class="bi bi-box-arrow-left me-1"></i>Sair</button>
+                </form>
+            </nav>
         </div>
     </body>
 </html>

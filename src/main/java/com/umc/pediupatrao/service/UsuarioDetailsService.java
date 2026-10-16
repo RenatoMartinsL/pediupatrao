@@ -1,5 +1,6 @@
 package com.umc.pediupatrao.service;
 
+import com.umc.pediupatrao.entity.Perfil;
 import com.umc.pediupatrao.repository.UsuarioRepository;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,11 +20,17 @@ public class UsuarioDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return usuarioRepository.findByUsername(username)
-                .map(usuario -> User.builder()
-                        .username(usuario.getUsername())
-                        .password(usuario.getPassword())
-                        .roles("USER") // Adicione roles conforme necessário
-                        .build())
+                .map(usuario -> {
+                    Perfil perfil = Perfil.deTexto(usuario.getRole());
+                    User.UserBuilder builder = User.builder()
+                            .username(usuario.getUsername())
+                            .password(usuario.getPassword());
+                    // Atribui a role do perfil cadastrado (ROLE_ADMIN, ROLE_GERENTE ou ROLE_ATENDENTE).
+                    // Usuário sem perfil válido autentica, mas não recebe nenhuma permissão.
+                    return perfil != null
+                            ? builder.roles(perfil.name()).build()
+                            : builder.authorities(java.util.List.of()).build();
+                })
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
     }
 }

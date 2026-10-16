@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Novo Pedido</title>
+</head>
+<body>
+
+<div th:fragment="content">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a href="/pedidos" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h2 class="mb-0">Novo pedido</h2>
+    </div>
+
+    <div th:replace="~{fragments/alertas :: alertas}"></div>
+
+    <div class="alert alert-warning" th:if="${#lists.isEmpty(clientes)}">
+        Nenhum cliente cadastrado. <a href="/clientes/novo">Cadastre um cliente</a> antes de registrar o pedido.
+    </div>
+
+    <div class="card" style="max-width: 760px;">
+        <div class="card-body p-4">
+            <form th:action="@{/pedidos/salvar}" th:object="${pedidoForm}" method="post" id="formPedido">
+
+                <div class="mb-3">
+                    <label for="clienteId" class="form-label fw-medium"><i class="bi bi-person me-1"></i>Cliente</label>
+                    <select id="clienteId" class="form-select" th:field="*{clienteId}" required>
+                        <option value="">Selecione o cliente</option>
+                        <option th:each="c : ${clientes}" th:value="${c.id}"
+                                th:text="${c.nome + ' (' + c.telefone + ')'}"></option>
+                    </select>
+                </div>
+
+                <p class="fw-medium mb-2"><i class="bi bi-list-ul me-1"></i>Itens</p>
+                <table class="table align-middle" id="tabelaItens">
+                    <thead>
+                        <tr><th>Produto</th><th style="width:120px">Qtd.</th><th class="text-end" style="width:140px">Subtotal (prévia)</th><th style="width:50px"></th></tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="item, st : *{itens}" class="linha-item">
+                            <td>
+                                <select class="form-select produto" th:name="|itens[${st.index}].produtoId|" required>
+                                    <option value="">Selecione</option>
+                                    <option th:each="p : ${produtos}" th:value="${p.id}" th:attr="data-preco=${p.preco}"
+                                            th:text="${p.nome + ', R$ ' + #numbers.formatDecimal(p.preco, 1, 'POINT', 2, 'COMMA')}"
+                                            th:selected="${p.id == item.produtoId}"></option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" class="form-control quantidade" min="1" max="50"
+                                       th:name="|itens[${st.index}].quantidade|" th:value="${item.quantidade}" required>
+                            </td>
+                            <td class="text-end subtotal">-</td>
+                            <td><button type="button" class="btn btn-sm btn-outline-danger remover"><i class="bi bi-x"></i></button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-sm btn-outline-primary mb-3" id="btnAddItem">
+                    <i class="bi bi-plus"></i> Adicionar item
+                </button>
+
+                <div class="mb-3">
+                    <label for="observacao" class="form-label fw-medium">Observação</label>
+                    <input type="text" id="observacao" class="form-control" th:field="*{observacao}"
+                           maxlength="200" placeholder="Ex.: sem cebola, troco para 100">
+                </div>
+
+                <p class="text-end fs-5">Total estimado: <strong id="totalPrevia">R$ 0,00</strong></p>
+                <p class="text-muted small text-end">O valor oficial é calculado pelo servidor ao registrar o pedido.</p>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Registrar pedido</button>
+                    <a href="/pedidos" class="btn btn-outline-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const tbody = document.querySelector('#tabelaItens tbody');
+            const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            // Reindexa os nomes itens[i].campo para o Spring montar a lista corretamente
+            function reindexar() {
+                tbody.querySelectorAll('tr.linha-item').forEach((tr, i) => {
+                    tr.querySelector('.produto').name = `itens[${i}].produtoId`;
+                    tr.querySelector('.quantidade').name = `itens[${i}].quantidade`;
+                });
+            }
+
+            // Prévia apenas visual; o total real é calculado no servidor
+            function atualizarPrevia() {
+                let total = 0;
+                tbody.querySelectorAll('tr.linha-item').forEach(tr => {
+                    const opt = tr.querySelector('.produto').selectedOptions[0];
+                    const preco = opt && opt.dataset.preco ? parseFloat(opt.dataset.preco) : 0;
+                    const qtd = parseInt(tr.querySelector('.quantidade').value || '0', 10);
+                    const sub = preco * qtd;
+                    total += sub;
+                    tr.querySelector('.subtotal').textContent = sub ? fmt(sub) : '-';
+                });
+                document.getElementById('totalPrevia').textContent = fmt(total);
+            }
+
+            document.getElementById('btnAddItem').addEventListener('click', () => {
+                const nova = tbody.querySelector('tr.linha-item').cloneNode(true);
+                nova.querySelector('.produto').value = '';
+                nova.querySelector('.quantidade').value = 1;
+                tbody.appendChild(nova);
+                reindexar();
+                atualizarPrevia();
+            });
+
+            tbody.addEventListener('click', e => {
+                const btn = e.target.closest('.remover');
+                if (btn && tbody.querySelectorAll('tr.linha-item').length > 1) {
+                    btn.closest('tr').remove();
+                    reindexar();
+                    atualizarPrevia();
+                }
+            });
+            tbody.addEventListener('change', atualizarPrevia);
+            tbody.addEventListener('input', atualizarPrevia);
+            atualizarPrevia();
+        })();
+    </script>
+</div>
+
+</body>
+</html>

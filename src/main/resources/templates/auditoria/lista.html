@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Auditoria</title>
+</head>
+<body>
+
+<div th:fragment="content">
+
+    <div class="cabecalho">
+        <h2 class="mb-0">Auditoria</h2>
+        <div class="sub">Somente leitura. Telefones aparecem parcialmente.</div>
+    </div>
+
+    <form class="row g-2 mb-3" method="get" th:action="@{/auditoria}">
+        <div class="col-md-3">
+            <select name="entidade" class="form-select">
+                <option value="">Todas as entidades</option>
+                <option th:each="e : ${ {'Pedido','Cliente','Usuario'} }" th:value="${e}" th:text="${e}"
+                        th:selected="${e == filtroEntidade}"></option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <select name="operacao" class="form-select">
+                <option value="">Todas as operações</option>
+                <option th:each="o : ${operacoes}" th:value="${o.name()}" th:text="${o.descricao}"
+                        th:selected="${o.name() == filtroOperacao}"></option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input type="text" name="usuario" class="form-control" placeholder="Usuário" th:value="${filtroUsuario}">
+        </div>
+        <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-outline-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table align-top small">
+                <thead>
+                    <tr>
+                        <th>Quando</th>
+                        <th>Quem</th>
+                        <th>O que</th>
+                        <th>Alterações (antes / depois)</th>
+                        <th>Motivo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(registros)}">
+                        <td colspan="5" class="text-center text-muted py-5">Nenhum registro de auditoria.</td>
+                    </tr>
+                    <tr th:each="r : ${registros}">
+                        <td class="text-nowrap" th:text="${#temporals.format(r.dataHora, 'dd/MM/yyyy HH:mm:ss')}"></td>
+                        <td class="text-nowrap">
+                            <div th:text="${r.usuario}"></div>
+                            <div class="text-muted" th:text="${r.perfil}"></div>
+                        </td>
+                        <td>
+                            <div th:text="${r.operacao.descricao}"></div>
+                            <a th:if="${r.entidade == 'Pedido'}" th:href="@{/pedidos/{id}(id=${r.entidadeId})}"
+                               class="text-muted" th:text="|${r.entidade} #${#strings.substring(r.entidadeId, 18)}|"></a>
+                            <span th:if="${r.entidade != 'Pedido'}" class="text-muted"
+                                  th:text="|${r.entidade} #${#strings.substring(r.entidadeId, 18)}|"></span>
+                        </td>
+                        <td>
+                            <div class="alteracao" th:each="a : ${r.alteracoes}">
+                                <code th:text="${a.campo}"></code>:
+                                <span class="antes" th:if="${a.valorAnterior}" th:text="${a.valorAnterior}"></span>
+                                <span th:text="${a.valorNovo ?: '(vazio)'}"></span>
+                            </div>
+                        </td>
+                        <td th:text="${r.justificativa}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer text-muted small" th:if="${!#lists.isEmpty(registros)}">
+            <strong th:text="${#lists.size(registros)}"></strong> evento(s)
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

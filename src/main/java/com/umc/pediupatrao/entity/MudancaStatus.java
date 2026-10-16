@@ -1,0 +1,29 @@
+package com.umc.pediupatrao.entity;
+
+import java.time.LocalDateTime;
+
+/** Linha do histórico de status do pedido (quem mudou e quando). */
+public class MudancaStatus {
+
+    private StatusPedido status;
+    private LocalDateTime dataHora;
+    private String usuario;
+
+    public MudancaStatus() {
+    }
+
+    public MudancaStatus(StatusPedido status, LocalDateTime dataHora, String usuario) {
+        this.status = status;
+        this.dataHora = dataHora;
+        this.usuario = usuario;
+    }
+
+    public StatusPedido getStatus() { return status; }
+    public void setStatus(StatusPedido status) { this.status = status; }
+
+    public LocalDateTime getDataHora() { return dataHora; }
+    public void setDataHora(LocalDateTime dataHora) { this.dataHora = dataHora; }
+
+    public String getUsuario() { return usuario; }
+    public void setUsuario(String usuario) { this.usuario = usuario; }
+}
