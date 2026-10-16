@@ -57,6 +57,9 @@ public class HomeController {
         BigDecimal finalizadoHoje = BigDecimal.ZERO;
 
         for (Pedido p : pedidoService.listarPedidos()) {
+            if (p.getStatus() == null) {
+                continue; // pedido antigo, de antes desta versão
+            }
             boolean ehDeHoje = p.getDataHoraEntrada() != null && p.getDataHoraEntrada().toLocalDate().equals(hoje);
             if (ehDeHoje) {
                 pedidosHoje++;
