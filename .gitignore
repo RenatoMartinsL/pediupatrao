@@ -1,0 +1,33 @@
+# Maven
+/target/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/.nb-gradle/
+
+# IntelliJ IDEA
+/.idea/
+*.iml
+
+# Eclipse / STS
+/.classpath
+/.project
+/.settings/
+
+# VS Code
+/.vscode/
+
+# Visual Studio
+/.vs/
+
+# Logs
+*.log
+
+# Arquivos do sistema
+Thumbs.db
+.DS_Store
+
+# Configurações locais / credenciais
+application-local.properties

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Jornada do Usuário – PediuPatrão</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2328; font-size: 10.5pt; margin: 0; }
+  h1 { font-size: 20pt; margin: 0 0 2px; color: #b3261e; }
+  h2 { font-size: 13pt; margin: 18px 0 8px; color: #b3261e; border-bottom: 2px solid #f0d5d2; padding-bottom: 3px; }
+  .sub { color: #555; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card { border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; background: #fcfaf9; }
+  .card h3 { margin: 0 0 6px; font-size: 11.5pt; }
+  ul { margin: 4px 0; padding-left: 18px; }
+  li { margin: 2px 0; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.6pt; }
+  th, td { border: 1px solid #d6d6d6; padding: 5px 6px; vertical-align: top; }
+  thead th { background: #b3261e; color: #fff; font-size: 9pt; }
+  tbody th { background: #f6e9e7; text-align: left; width: 11%; }
+  tr.emo td { text-align: center; font-size: 15pt; }
+  tr.cli td { background: #eef4fb; }
+  tr.cli th { background: #dbe8f6; }
+  .page { page-break-before: always; }
+  .small { font-size: 9pt; color: #555; }
+</style>
+</head>
+<body>
+
+<h1>Jornada do Usuário – Sistema PediuPatrão</h1>
+<div class="sub">Atividade Prática M1 – Parte 1 (UX) · Engenharia de Software · Usuário principal: Atendente da pizzaria</div>
+
+<h2>1. Contexto e escolha do usuário</h2>
+<p>O PediuPatrão é o sistema interno de uma pizzaria, usado para cadastrar clientes, gerenciar produtos e registrar pedidos. Os perfis são <b>Administrador</b>, <b>Gerente</b> e <b>Atendente</b>; o cliente final não acessa o sistema: ele faz o pedido por telefone/WhatsApp e a atendente registra tudo. Por isso, a jornada mapeada é a da <b>Atendente</b>, que é quem mais usa o sistema. Em cada etapa também registramos o que o <b>cliente final</b> está vivendo, já que a experiência da atendente impacta diretamente o atendimento.</p>
+
+<div class="grid">
+  <div class="card">
+    <h3>Persona: Camila, 24 anos – Atendente</h3>
+    <ul>
+      <li>Trabalha no turno da noite (18h–23h), de quinta a domingo.</li>
+      <li>Atende telefone e WhatsApp ao mesmo tempo; no pico chega a ter 3–4 clientes esperando.</li>
+      <li>Usa bem o celular, mas não é "da área de TI"; quer um sistema rápido e sem complicação.</li>
+      <li><b>Objetivo:</b> registrar pedidos corretos, rapidamente, e saber em que pé cada um está.</li>
+      <li><b>Frustrações:</b> telas lentas, ter que digitar o endereço de novo, depender da gerente para qualquer exceção, cliente ligando para perguntar "cadê minha pizza?".</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Cenário</h3>
+    <p>Sexta-feira, 20h30, horário de pico. O cliente Marcos liga pedindo 2 pizzas grandes e 1 refrigerante para entrega. Ele já pediu antes, mas mudou de endereço. Pede um desconto porque o último pedido atrasou.</p>
+    <h3>Outros perfis que aparecem na jornada</h3>
+    <ul>
+      <li><b>Gerente:</b> aplica desconto (até 20%) e cancela pedidos, com justificativa.</li>
+      <li><b>Cozinha / entregador:</b> recebem o pedido e fazem a saída.</li>
+      <li><b>Administrador:</b> cria os usuários e define os perfis (fora do fluxo do pedido).</li>
+    </ul>
+  </div>
+</div>
+
+<div class="page"></div>
+<h2>2. Mapa da jornada – Atendente registrando e acompanhando um pedido</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width:11%"></th>
+      <th>1. Login</th>
+      <th>2. Receber o contato</th>
+      <th>3. Buscar / atualizar cliente</th>
+      <th>4. Montar o pedido</th>
+      <th>5. Exceção: desconto</th>
+      <th>6. Acompanhar o preparo</th>
+      <th>7. Saída do pedido</th>
+      <th>8. Finalizar</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Ações</th>
+      <td>Entra com usuário e senha; vê a tela inicial do seu perfil.</td>
+      <td>Atende ligação/WhatsApp e abre "Novo pedido".</td>
+      <td>Busca o cliente pelo telefone; atualiza o novo endereço.</td>
+      <td>Adiciona itens e quantidades; sistema calcula o total; confirma (status RECEBIDO).</td>
+      <td>Cliente pede desconto; Camila chama a gerente, que aplica o percentual com justificativa.</td>
+      <td>Pedido vai para EM PREPARAÇÃO e depois PRONTO; Camila consulta a lista de pedidos.</td>
+      <td>Registra SAIU PARA ENTREGA (ou RETIRADO), com horário e responsável.</td>
+      <td>Marca FINALIZADO após a confirmação da entrega.</td>
+    </tr>
+    <tr>
+      <th>Pensamentos</th>
+      <td>"Tomara que não peça senha de novo no meio do pico."</td>
+      <td>"Tem mais gente esperando, preciso ser rápida."</td>
+      <td>"Ele já é cliente, não quero digitar tudo de novo."</td>
+      <td>"O valor está certo? Esqueci a borda?"</td>
+      <td>"Não posso dar desconto sozinha. Cadê a gerente?"</td>
+      <td>"Já está pronto? O cliente vai ligar perguntando."</td>
+      <td>"Quem levou esse pedido e que horas saiu?"</td>
+      <td>"Mais um fechado, próximo!"</td>
+    </tr>
+    <tr class="emo">
+      <th style="font-size:9pt">Emoção</th>
+      <td>😐</td><td>😟</td><td>🙂</td><td>😐</td><td>😞</td><td>😟</td><td>🙂</td><td>😀</td>
+    </tr>
+    <tr>
+      <th>Pontos de dor</th>
+      <td>Sessão expirando; não saber o que cada perfil pode fazer.</td>
+      <td>Vários canais ao mesmo tempo; nenhum registro do contato.</td>
+      <td>Endereço desatualizado gera entrega errada; sem histórico de quem alterou.</td>
+      <td>Cálculo manual sujeito a erro; itens sem preço visível.</td>
+      <td>Depende da gerente; sem regra clara do limite; pedido "parado".</td>
+      <td>Status não muda sozinho; difícil ver atrasos.</td>
+      <td>Sem registro de horário/responsável pela saída.</td>
+      <td>Pedidos esquecidos sem finalizar bagunçam o relatório.</td>
+    </tr>
+    <tr>
+      <th>Oportunidades</th>
+      <td>Menu e telas de acordo com o perfil; mensagem clara quando algo não é permitido.</td>
+      <td>Botão "Novo pedido" sempre visível; busca rápida por telefone.</td>
+      <td>Autopreenchimento dos dados; auditoria registrando valor anterior e novo do endereço.</td>
+      <td>Total calculado no servidor; resumo do pedido antes de confirmar.</td>
+      <td>Botão "Solicitar desconto" que notifica a gerente; limite de 20% exibido; registro na auditoria.</td>
+      <td>Painel com status por cor e tempo decorrido em cada etapa.</td>
+      <td>Registro automático de data/hora e usuário na saída.</td>
+      <td>Só permitir finalizar após a saída; lista de "pedidos em aberto".</td>
+    </tr>
+    <tr class="cli">
+      <th>O que o cliente vive</th>
+      <td>—</td>
+      <td>Espera na linha ou no chat.</td>
+      <td>Confirma os dados; fica inseguro se o endereço novo foi salvo.</td>
+      <td>Ouve o valor total e confirma.</td>
+      <td>Espera a decisão do desconto.</td>
+      <td>Ansioso; liga perguntando "já saiu?".</td>
+      <td>Recebe a previsão de chegada.</td>
+      <td>Recebe a pizza; satisfeito (ou não).</td>
+    </tr>
+  </tbody>
+</table>
+<p class="small">Fluxo de status do pedido: RECEBIDO → EM PREPARAÇÃO → PRONTO → SAIU PARA ENTREGA / RETIRADO → FINALIZADO. CANCELADO é exceção, feito só pela Gerente, antes da saída e com justificativa.</p>
+
+<h2>3. Principais conclusões e melhorias propostas</h2>
+<div class="grid">
+  <div class="card">
+    <h3>Momentos críticos</h3>
+    <ul>
+      <li><b>Exceções (desconto/cancelamento):</b> o ponto mais baixo da jornada; a atendente fica travada esperando a gerente.</li>
+      <li><b>Acompanhamento do preparo:</b> falta de visibilidade gera ansiedade na atendente e ligações do cliente.</li>
+      <li><b>Dados do cliente:</b> alterações de endereço/telefone sem histórico causam entregas erradas e conflitos.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Melhorias (ligadas à Parte 2)</h3>
+    <ul>
+      <li><b>Perfis de acesso</b> (Admin, Gerente, Atendente) com permissões validadas no backend.</li>
+      <li><b>Valor total calculado no servidor</b>, com itens, quantidades e preços.</li>
+      <li><b>Fluxo de status controlado</b>, registrando entrada, saída e responsáveis.</li>
+      <li><b>Desconto (até 20%) e cancelamento</b> exclusivos da gerente, com justificativa.</li>
+      <li><b>Auditoria</b> de pedidos e clientes: quem alterou, quando, valor anterior e novo.</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>
