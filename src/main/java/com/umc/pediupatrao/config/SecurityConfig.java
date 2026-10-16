@@ -74,8 +74,8 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.csrfTokenRequestHandler(csrfHandler))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login", "/acesso-negado", "/error", "/css/**", "/dist/**", "/plugins/**",
-                                "/js/**", "/images/**", "/favicon.ico").permitAll()
+                        .requestMatchers("/login", "/acesso-negado", "/error", "/css/**", "/js/**", "/images/**",
+                                "/favicon.ico").permitAll()
 
                         // Usuários e perfis: somente ADMIN
                         .requestMatchers("/usuarios/**", "/api/usuarios/**").hasRole(ADMIN)
