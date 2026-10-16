@@ -5,7 +5,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
-/** Disponibiliza o perfil do usuário logado para todas as telas (exibido no menu lateral). */
+// Deixa o perfil do usuário logado disponível em todas as telas (aparece no menu)
 @ControllerAdvice(annotations = Controller.class)
 public class PerfilModelAdvice {
 

@@ -12,6 +12,7 @@ import com.umc.pediupatrao.service.ClienteService;
 import com.umc.pediupatrao.service.PedidoService;
 import com.umc.pediupatrao.service.ProdutoService;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/** Telas de pedidos: lista, novo pedido, detalhe com transições, desconto e cancelamento. */
+// Telas de pedidos (as regras ficam no PedidoService; aqui só mostramos as mensagens)
 @Controller
 public class PedidoWebController {
 
@@ -39,18 +40,19 @@ public class PedidoWebController {
         this.auditoriaService = auditoriaService;
     }
 
-    /** Coluna do quadro de pedidos. */
+    // Uma coluna do quadro de pedidos
     public record Coluna(String titulo, List<Pedido> pedidos) {
     }
 
     @GetMapping("/pedidos")
     public String pedidos(Model model) {
         List<Pedido> pedidos = pedidoService.listarPedidos();
-        model.addAttribute("colunas", List.of(
+        List<Coluna> colunas = List.of(
                 new Coluna("Recebido", filtrar(pedidos, StatusPedido.RECEBIDO)),
                 new Coluna("Em preparação", filtrar(pedidos, StatusPedido.EM_PREPARACAO)),
                 new Coluna("Pronto", filtrar(pedidos, StatusPedido.PRONTO)),
-                new Coluna("Na rua / retirado", filtrar(pedidos, StatusPedido.SAIU_PARA_ENTREGA, StatusPedido.RETIRADO))));
+                new Coluna("Na rua / retirado", filtrar(pedidos, StatusPedido.SAIU_PARA_ENTREGA, StatusPedido.RETIRADO)));
+        model.addAttribute("colunas", colunas);
         model.addAttribute("encerrados", filtrar(pedidos, StatusPedido.FINALIZADO, StatusPedido.CANCELADO));
         model.addAttribute("content", "pedidos :: content");
         return "layout";
@@ -59,7 +61,7 @@ public class PedidoWebController {
     @GetMapping("/pedidos/novo")
     public String novoPedido(Model model) {
         PedidoForm form = new PedidoForm();
-        form.getItens().add(new PedidoForm.Item(null, 1));
+        form.getItens().add(new PedidoForm.Item(null, 1)); // começa com uma linha de item
         model.addAttribute("pedidoForm", form);
         model.addAttribute("clientes", clienteService.listarClientes());
         model.addAttribute("produtos", produtoService.listarAtivos());
@@ -71,7 +73,7 @@ public class PedidoWebController {
     public String salvarPedido(@ModelAttribute PedidoForm pedidoForm, RedirectAttributes redirectAttributes) {
         try {
             Pedido pedido = pedidoService.criarPedido(pedidoForm);
-            redirectAttributes.addFlashAttribute("sucesso", "Pedido registrado (RECEBIDO).");
+            redirectAttributes.addFlashAttribute("sucesso", "Pedido registrado.");
             return "redirect:/pedidos/" + pedido.getId();
         } catch (RegraNegocioException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
@@ -84,8 +86,9 @@ public class PedidoWebController {
         try {
             Pedido pedido = pedidoService.buscarPorId(id);
             model.addAttribute("pedido", pedido);
-            model.addAttribute("proximos", List.copyOf(pedido.getStatus().proximos()));
+            model.addAttribute("proximos", new ArrayList<>(pedido.getStatus().proximos()));
             model.addAttribute("descontoMaximo", PedidoService.DESCONTO_MAXIMO);
+            // a auditoria do pedido só aparece para quem pode ver auditoria
             if (UsuarioLogado.tem(Perfil.ADMIN) || UsuarioLogado.tem(Perfil.GERENTE)) {
                 model.addAttribute("auditoria", auditoriaService.historicoDe("Pedido", id));
             }
@@ -100,37 +103,47 @@ public class PedidoWebController {
     @PostMapping("/pedidos/{id}/status")
     public String mudarStatus(@PathVariable String id, @RequestParam StatusPedido status,
             RedirectAttributes redirectAttributes) {
-        return executar(id, redirectAttributes, "Status atualizado para " + status.getDescricao() + ".",
-                () -> pedidoService.atualizarStatus(id, status));
+        try {
+            pedidoService.atualizarStatus(id, status);
+            redirectAttributes.addFlashAttribute("sucesso", "Status alterado para " + status.getDescricao() + ".");
+        } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/pedidos/" + id;
     }
 
     @PostMapping("/pedidos/{id}/desconto")
     public String desconto(@PathVariable String id, @RequestParam BigDecimal percentual,
             @RequestParam(required = false) String justificativa, RedirectAttributes redirectAttributes) {
-        return executar(id, redirectAttributes, "Desconto aplicado.",
-                () -> pedidoService.aplicarDesconto(id, percentual, justificativa));
+        try {
+            pedidoService.aplicarDesconto(id, percentual, justificativa);
+            redirectAttributes.addFlashAttribute("sucesso", "Desconto aplicado.");
+        } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+        return "redirect:/pedidos/" + id;
     }
 
     @PostMapping("/pedidos/{id}/cancelar")
     public String cancelar(@PathVariable String id, @RequestParam(required = false) String justificativa,
             RedirectAttributes redirectAttributes) {
-        return executar(id, redirectAttributes, "Pedido cancelado.",
-                () -> pedidoService.cancelar(id, justificativa));
-    }
-
-    private static List<Pedido> filtrar(List<Pedido> pedidos, StatusPedido... status) {
-        List<StatusPedido> aceitos = List.of(status);
-        return pedidos.stream().filter(p -> aceitos.contains(p.getStatus())).toList();
-    }
-
-    private String executar(String id, RedirectAttributes redirectAttributes, String mensagemSucesso,
-            Runnable acao) {
         try {
-            acao.run();
-            redirectAttributes.addFlashAttribute("sucesso", mensagemSucesso);
+            pedidoService.cancelar(id, justificativa);
+            redirectAttributes.addFlashAttribute("sucesso", "Pedido cancelado.");
         } catch (RegraNegocioException | RecursoNaoEncontradoException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
         }
         return "redirect:/pedidos/" + id;
+    }
+
+    private static List<Pedido> filtrar(List<Pedido> pedidos, StatusPedido... status) {
+        List<StatusPedido> aceitos = List.of(status);
+        List<Pedido> resultado = new ArrayList<>();
+        for (Pedido p : pedidos) {
+            if (aceitos.contains(p.getStatus())) {
+                resultado.add(p);
+            }
+        }
+        return resultado;
     }
 }

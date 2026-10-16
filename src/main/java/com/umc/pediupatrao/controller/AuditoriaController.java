@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Consulta da auditoria (somente leitura; não existem rotas de alteração ou exclusão). */
+// Consulta da auditoria. Só tem GET: não existe rota para alterar ou apagar.
 @RestController
 @RequestMapping("/api/auditoria")
 public class AuditoriaController {

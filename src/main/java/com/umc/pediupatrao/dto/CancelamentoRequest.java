@@ -1,5 +1,5 @@
 package com.umc.pediupatrao.dto;
 
-/** Cancelamento de pedido: a justificativa é obrigatória. */
+// Corpo da requisição de cancelamento
 public record CancelamentoRequest(String justificativa) {
 }

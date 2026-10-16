@@ -2,23 +2,21 @@ package com.umc.pediupatrao.controller;
 
 import com.umc.pediupatrao.entity.Cliente;
 import com.umc.pediupatrao.entity.Pedido;
-import com.umc.pediupatrao.entity.StatusPedido;
-import com.umc.pediupatrao.security.UsuarioLogado;
-import com.umc.pediupatrao.service.PedidoService;
-import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
-import java.util.List;
 import com.umc.pediupatrao.entity.Perfil;
 import com.umc.pediupatrao.entity.Produto;
+import com.umc.pediupatrao.entity.StatusPedido;
 import com.umc.pediupatrao.entity.Usuario;
 import com.umc.pediupatrao.exception.RecursoNaoEncontradoException;
 import com.umc.pediupatrao.exception.RegraNegocioException;
 import com.umc.pediupatrao.service.ClienteService;
+import com.umc.pediupatrao.service.PedidoService;
 import com.umc.pediupatrao.service.ProdutoService;
 import com.umc.pediupatrao.service.UsuarioService;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,10 +25,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/**
- * Telas Thymeleaf de início, usuários, clientes e produtos.
- * A autorização é feita no SecurityConfig e nos serviços (@PreAuthorize); aqui só tratamos as mensagens.
- */
+// Telas de início, usuários, clientes e produtos
 @Controller
 public class HomeController {
 
@@ -38,15 +33,13 @@ public class HomeController {
     private final ProdutoService produtoService;
     private final UsuarioService usuarioService;
     private final PedidoService pedidoService;
-    private final Clock clock;
 
     public HomeController(ClienteService clienteService, ProdutoService produtoService,
-            UsuarioService usuarioService, PedidoService pedidoService, Clock clock) {
+            UsuarioService usuarioService, PedidoService pedidoService) {
         this.clienteService = clienteService;
         this.produtoService = produtoService;
         this.usuarioService = usuarioService;
         this.pedidoService = pedidoService;
-        this.clock = clock;
     }
 
     @GetMapping("/login")
@@ -56,21 +49,34 @@ public class HomeController {
 
     @GetMapping("/")
     public String home(Model model) {
-        LocalDate hoje = LocalDate.now(clock);
-        List<Pedido> pedidos = UsuarioLogado.perfil().equals("SEM_PERFIL") ? List.of() : pedidoService.listarPedidos();
-        List<Pedido> deHoje = pedidos.stream()
-                .filter(p -> p.getDataHoraEntrada() != null && p.getDataHoraEntrada().toLocalDate().equals(hoje))
-                .toList();
+        // números do painel inicial
+        LocalDate hoje = LocalDate.now();
+        int pedidosHoje = 0;
+        int emAndamento = 0;
+        int prontos = 0;
+        BigDecimal finalizadoHoje = BigDecimal.ZERO;
+
+        for (Pedido p : pedidoService.listarPedidos()) {
+            boolean ehDeHoje = p.getDataHoraEntrada() != null && p.getDataHoraEntrada().toLocalDate().equals(hoje);
+            if (ehDeHoje) {
+                pedidosHoje++;
+            }
+            if (p.getStatus().isAntesDaSaida()) {
+                emAndamento++;
+            }
+            if (p.getStatus() == StatusPedido.PRONTO) {
+                prontos++;
+            }
+            if (ehDeHoje && p.getStatus() == StatusPedido.FINALIZADO) {
+                finalizadoHoje = finalizadoHoje.add(p.getValorTotal());
+            }
+        }
 
         model.addAttribute("hoje", hoje.format(DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM", Locale.of("pt", "BR"))));
-        model.addAttribute("pedidosHoje", deHoje.size());
-        model.addAttribute("emAndamento", pedidos.stream()
-                .filter(p -> p.getStatus() != null && p.getStatus().isAntesDaSaida()).count());
-        model.addAttribute("prontos", pedidos.stream().filter(p -> p.getStatus() == StatusPedido.PRONTO).count());
-        model.addAttribute("faturadoHoje", deHoje.stream()
-                .filter(p -> p.getStatus() == StatusPedido.FINALIZADO)
-                .map(Pedido::getValorTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        model.addAttribute("pedidosHoje", pedidosHoje);
+        model.addAttribute("emAndamento", emAndamento);
+        model.addAttribute("prontos", prontos);
+        model.addAttribute("faturadoHoje", finalizadoHoje);
         model.addAttribute("content", "home :: content");
         return "layout";
     }

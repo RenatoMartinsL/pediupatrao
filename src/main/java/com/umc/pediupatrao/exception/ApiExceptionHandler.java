@@ -11,10 +11,11 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/** Respostas de erro padronizadas para as APIs REST (/api/**). */
-@RestControllerAdvice(annotations = org.springframework.web.bind.annotation.RestController.class)
+// Transforma os erros das APIs em respostas JSON com status HTTP adequado
+@RestControllerAdvice(annotations = RestController.class)
 public class ApiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);

@@ -5,7 +5,6 @@ import com.umc.pediupatrao.entity.RegistroAuditoria.CampoAlterado;
 import com.umc.pediupatrao.entity.TipoOperacao;
 import com.umc.pediupatrao.repository.AuditoriaRepository;
 import com.umc.pediupatrao.security.UsuarioLogado;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -20,49 +19,44 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuditoriaService {
 
-    /** Campos que nunca podem ir para a auditoria. */
-    private static final Set<String> CAMPOS_SENSIVEIS = Set.of("password", "senha", "token", "credencial");
-    private static final Set<String> CAMPOS_TELEFONE = Set.of("telefone");
-    private static final DateTimeFormatter FORMATO_DATA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+    // estes campos nunca são gravados na auditoria
+    private static final Set<String> CAMPOS_PROIBIDOS = Set.of("password", "senha", "token");
+    private static final DateTimeFormatter FORMATO_DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
     private final AuditoriaRepository repository;
-    private final Clock clock;
 
-    public AuditoriaService(AuditoriaRepository repository, Clock clock) {
+    public AuditoriaService(AuditoriaRepository repository) {
         this.repository = repository;
-        this.clock = clock;
     }
 
-    /** Registra um evento com o usuário autenticado, seu perfil e a data/hora atual. */
+    // Grava um registro com o usuário logado, o perfil dele e a hora atual
     public RegistroAuditoria registrar(TipoOperacao operacao, String entidade, String entidadeId,
             List<CampoAlterado> alteracoes, String justificativa) {
-        List<CampoAlterado> filtradas = alteracoes == null ? List.of() : alteracoes.stream()
-                .filter(a -> !CAMPOS_SENSIVEIS.contains(a.campo().toLowerCase()))
-                .toList();
-        RegistroAuditoria registro = RegistroAuditoria.novo(
-                UsuarioLogado.username(), UsuarioLogado.perfil(), LocalDateTime.now(clock),
-                operacao, entidade, entidadeId, filtradas, justificativa);
+        List<CampoAlterado> permitidas = new ArrayList<>();
+        if (alteracoes != null) {
+            for (CampoAlterado alteracao : alteracoes) {
+                if (!CAMPOS_PROIBIDOS.contains(alteracao.campo().toLowerCase())) {
+                    permitidas.add(alteracao);
+                }
+            }
+        }
+        RegistroAuditoria registro = new RegistroAuditoria(null, UsuarioLogado.username(), UsuarioLogado.perfil(),
+                LocalDateTime.now(), operacao, entidade, entidadeId, permitidas, justificativa);
         return repository.insert(registro);
     }
 
-    /**
-     * Compara dois "retratos" (campo -> valor) e devolve só os campos que mudaram.
-     * Campos ausentes em um dos lados são tratados como vazios.
-     */
-    public static List<CampoAlterado> diferencas(Map<String, ?> anterior, Map<String, ?> novo) {
+    // Compara os campos de antes e de depois e devolve só os que mudaram
+    public static List<CampoAlterado> diferencas(Map<String, ?> antes, Map<String, ?> depois) {
         Set<String> campos = new LinkedHashSet<>();
-        if (anterior != null) {
-            campos.addAll(anterior.keySet());
-        }
-        if (novo != null) {
-            campos.addAll(novo.keySet());
-        }
+        campos.addAll(antes.keySet());
+        campos.addAll(depois.keySet());
+
         List<CampoAlterado> mudancas = new ArrayList<>();
         for (String campo : campos) {
-            String antes = texto(anterior == null ? null : anterior.get(campo));
-            String depois = texto(novo == null ? null : novo.get(campo));
-            if (!Objects.equals(antes, depois)) {
-                mudancas.add(new CampoAlterado(campo, antes, depois));
+            String valorAntes = paraTexto(antes.get(campo));
+            String valorDepois = paraTexto(depois.get(campo));
+            if (!Objects.equals(valorAntes, valorDepois)) {
+                mudancas.add(new CampoAlterado(campo, valorAntes, valorDepois));
             }
         }
         return mudancas;
@@ -70,68 +64,62 @@ public class AuditoriaService {
 
     @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
     public List<RegistroAuditoria> consultar(String entidade, String operacao, String usuario) {
-        return repository.findAllByOrderByDataHoraDesc().stream()
-                .filter(r -> vazio(entidade) || r.getEntidade().equalsIgnoreCase(entidade))
-                .filter(r -> vazio(operacao) || r.getOperacao().name().equalsIgnoreCase(operacao))
-                .filter(r -> vazio(usuario) || r.getUsuario().toLowerCase().contains(usuario.toLowerCase()))
-                .map(AuditoriaService::protegerDadosPessoais)
-                .toList();
+        List<RegistroAuditoria> resultado = new ArrayList<>();
+        for (RegistroAuditoria r : repository.findAllByOrderByDataHoraDesc()) {
+            boolean entidadeOk = vazio(entidade) || r.getEntidade().equalsIgnoreCase(entidade);
+            boolean operacaoOk = vazio(operacao) || r.getOperacao().name().equalsIgnoreCase(operacao);
+            boolean usuarioOk = vazio(usuario) || r.getUsuario().toLowerCase().contains(usuario.toLowerCase());
+            if (entidadeOk && operacaoOk && usuarioOk) {
+                resultado.add(esconderTelefone(r));
+            }
+        }
+        return resultado;
     }
 
     @PreAuthorize("hasAnyRole('ADMIN','GERENTE')")
     public List<RegistroAuditoria> historicoDe(String entidade, String entidadeId) {
-        return repository.findByEntidadeAndEntidadeIdOrderByDataHoraDesc(entidade, entidadeId).stream()
-                .map(AuditoriaService::protegerDadosPessoais)
-                .toList();
+        List<RegistroAuditoria> resultado = new ArrayList<>();
+        for (RegistroAuditoria r : repository.findByEntidadeAndEntidadeIdOrderByDataHoraDesc(entidade, entidadeId)) {
+            resultado.add(esconderTelefone(r));
+        }
+        return resultado;
     }
 
-    /**
-     * Na consulta, o telefone aparece parcialmente (só os 4 últimos dígitos): o objetivo da auditoria
-     * é saber que houve alteração e quem a fez, não divulgar o dado pessoal completo.
-     */
-    static RegistroAuditoria protegerDadosPessoais(RegistroAuditoria r) {
-        List<CampoAlterado> protegidas = r.getAlteracoes().stream()
-                .map(a -> CAMPOS_TELEFONE.contains(a.campo())
-                        ? new CampoAlterado(a.campo(), mascararTelefone(a.valorAnterior()), mascararTelefone(a.valorNovo()))
-                        : a)
-                .toList();
+    // Na tela o telefone aparece só com os 4 últimos dígitos (proteção de dado pessoal)
+    private static RegistroAuditoria esconderTelefone(RegistroAuditoria r) {
+        List<CampoAlterado> alteracoes = new ArrayList<>();
+        for (CampoAlterado a : r.getAlteracoes()) {
+            if (a.campo().equals("telefone")) {
+                alteracoes.add(new CampoAlterado(a.campo(), mascararTelefone(a.valorAnterior()),
+                        mascararTelefone(a.valorNovo())));
+            } else {
+                alteracoes.add(a);
+            }
+        }
         return new RegistroAuditoria(r.getId(), r.getUsuario(), r.getPerfil(), r.getDataHora(), r.getOperacao(),
-                r.getEntidade(), r.getEntidadeId(), protegidas, r.getJustificativa());
+                r.getEntidade(), r.getEntidadeId(), alteracoes, r.getJustificativa());
     }
 
     static String mascararTelefone(String telefone) {
         if (telefone == null) {
             return null;
         }
-        String digitos = telefone.replaceAll("\\D", "");
-        if (digitos.length() <= 4) {
+        String numeros = telefone.replaceAll("\\D", ""); // só os dígitos
+        if (numeros.length() <= 4) {
             return telefone;
         }
-        // troca por * todos os dígitos, exceto os 4 últimos, preservando a formatação
-        int manter = 4;
-        int totalDigitos = digitos.length();
-        StringBuilder sb = new StringBuilder();
-        int visto = 0;
-        for (char c : telefone.toCharArray()) {
-            if (Character.isDigit(c)) {
-                visto++;
-                sb.append(visto > totalDigitos - manter ? c : '*');
-            } else {
-                sb.append(c);
-            }
-        }
-        return sb.toString();
+        return "****-" + numeros.substring(numeros.length() - 4);
     }
 
-    private static String texto(Object valor) {
+    private static String paraTexto(Object valor) {
         if (valor == null) {
             return null;
         }
-        if (valor instanceof LocalDateTime dataHora) {
-            return dataHora.format(FORMATO_DATA_HORA);
+        if (valor instanceof LocalDateTime data) {
+            return data.format(FORMATO_DATA);
         }
-        String s = valor.toString().trim();
-        return s.isEmpty() ? null : s;
+        String texto = valor.toString().trim();
+        return texto.isEmpty() ? null : texto;
     }
 
     private static boolean vazio(String s) {

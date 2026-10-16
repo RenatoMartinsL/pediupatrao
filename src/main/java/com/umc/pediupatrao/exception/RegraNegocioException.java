@@ -1,6 +1,6 @@
 package com.umc.pediupatrao.exception;
 
-/** Violação de regra de negócio (transição inválida, desconto acima do limite etc.). */
+// Erro de regra de negócio (ex.: desconto acima de 20%, status fora de ordem)
 public class RegraNegocioException extends RuntimeException {
 
     public RegraNegocioException(String mensagem) {

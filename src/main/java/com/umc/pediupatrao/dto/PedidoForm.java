@@ -3,10 +3,8 @@ package com.umc.pediupatrao.dto;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Dados que o cliente HTTP pode enviar para registrar/alterar um pedido.
- * Não há campos de preço, desconto ou total: esses valores são sempre calculados no servidor.
- */
+// O que o formulário (ou a API) manda para criar um pedido.
+// Não tem preço nem total de propósito: quem calcula é o servidor.
 public class PedidoForm {
 
     private String clienteId;

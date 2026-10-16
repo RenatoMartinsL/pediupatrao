@@ -24,10 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * Prova que a autorização está no backend: as chamadas diretas às APIs são bloqueadas
- * conforme o perfil, independentemente do que a tela mostra.
- */
+// Chama as APIs direto com cada perfil para mostrar que o bloqueio está no servidor
 @WebMvcTest(controllers = {PedidoController.class, AuditoriaController.class, UsuarioController.class,
     ClienteController.class})
 @Import(SecurityConfig.class)

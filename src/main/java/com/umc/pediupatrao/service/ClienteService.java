@@ -1,6 +1,7 @@
 package com.umc.pediupatrao.service;
 
 import com.umc.pediupatrao.entity.Cliente;
+import com.umc.pediupatrao.entity.RegistroAuditoria.CampoAlterado;
 import com.umc.pediupatrao.entity.TipoOperacao;
 import com.umc.pediupatrao.exception.RecursoNaoEncontradoException;
 import com.umc.pediupatrao.exception.RegraNegocioException;
@@ -12,14 +13,9 @@ import java.util.Optional;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
-/**
- * Cadastro de clientes: o ATENDENTE cadastra, altera e exclui; o GERENTE apenas consulta.
- * Toda inclusão, alteração (inclusive endereço e telefone) e exclusão é auditada.
- */
+// Atendente cadastra, altera e exclui. Gerente só consulta.
 @Service
 public class ClienteService {
-
-    private static final String ENTIDADE = "Cliente";
 
     private final ClienteRepository clienteRepository;
     private final AuditoriaService auditoriaService;
@@ -39,43 +35,46 @@ public class ClienteService {
         return clienteRepository.findById(id);
     }
 
-    // Método para salvar um novo cliente ou atualizar um cliente existente
+    // Salva um cliente novo (sem id) ou atualiza um existente (com id)
     @PreAuthorize("hasRole('ATENDENTE')")
     public Cliente salvar(Cliente cliente) {
         validar(cliente);
-        normalizar(cliente);
+        cliente.setNome(cliente.getNome().trim());
+        cliente.setTelefone(cliente.getTelefone().trim());
+        if (cliente.getEstado() != null) {
+            cliente.setEstado(cliente.getEstado().trim().toUpperCase());
+        }
 
-        // Se o cliente não tem ID (novo cliente), salva como novo
         if (cliente.getId() == null || cliente.getId().isBlank()) {
             cliente.setId(null);
             Cliente salvo = clienteRepository.save(cliente);
-            auditoriaService.registrar(TipoOperacao.INCLUSAO_CLIENTE, ENTIDADE, salvo.getId(),
-                    AuditoriaService.diferencas(Map.of(), retrato(salvo)), null);
+            List<CampoAlterado> alteracoes = AuditoriaService.diferencas(Map.of(), camposAuditados(salvo));
+            auditoriaService.registrar(TipoOperacao.INCLUSAO_CLIENTE, "Cliente", salvo.getId(), alteracoes, null);
             return salvo;
         }
 
-        // Se já tem ID (cliente existente), atualiza e audita só os campos que mudaram
         Cliente anterior = clienteRepository.findById(cliente.getId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Cliente não encontrado para atualização."));
         if (cliente.getEndereco() == null) {
-            cliente.setEndereco(anterior.getEndereco()); // preserva o campo legado
+            cliente.setEndereco(anterior.getEndereco()); // campo antigo do projeto base
         }
         Cliente salvo = clienteRepository.save(cliente);
-        var alteracoes = AuditoriaService.diferencas(retrato(anterior), retrato(salvo));
+
+        // só registra se algum campo mudou de fato
+        List<CampoAlterado> alteracoes = AuditoriaService.diferencas(camposAuditados(anterior), camposAuditados(salvo));
         if (!alteracoes.isEmpty()) {
-            auditoriaService.registrar(TipoOperacao.ALTERACAO_CLIENTE, ENTIDADE, salvo.getId(), alteracoes, null);
+            auditoriaService.registrar(TipoOperacao.ALTERACAO_CLIENTE, "Cliente", salvo.getId(), alteracoes, null);
         }
         return salvo;
     }
 
-    // Método para excluir cliente
     @PreAuthorize("hasRole('ATENDENTE')")
     public void excluir(String id) {
         Cliente anterior = clienteRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Cliente não encontrado."));
         clienteRepository.deleteById(id);
-        auditoriaService.registrar(TipoOperacao.EXCLUSAO_CLIENTE, ENTIDADE, id,
-                AuditoriaService.diferencas(retrato(anterior), Map.of()), null);
+        List<CampoAlterado> alteracoes = AuditoriaService.diferencas(camposAuditados(anterior), Map.of());
+        auditoriaService.registrar(TipoOperacao.EXCLUSAO_CLIENTE, "Cliente", id, alteracoes, null);
     }
 
     private static void validar(Cliente c) {
@@ -90,26 +89,17 @@ public class ClienteService {
         }
     }
 
-    private static void normalizar(Cliente c) {
-        c.setNome(c.getNome().trim());
-        c.setTelefone(c.getTelefone().trim());
-        if (c.getEstado() != null) {
-            c.setEstado(c.getEstado().trim().toUpperCase());
-        }
-    }
-
-    /** Campos auditados do cliente. */
-    private static Map<String, Object> retrato(Cliente c) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("nome", c.getNome());
-        m.put("telefone", c.getTelefone());
-        m.put("cep", c.getCep());
-        m.put("logradouro", c.getLogradouro());
-        m.put("numero", c.getNumero());
-        m.put("complemento", c.getComplemento());
-        m.put("bairro", c.getBairro());
-        m.put("cidade", c.getCidade());
-        m.put("estado", c.getEstado());
-        return m;
+    private static Map<String, Object> camposAuditados(Cliente c) {
+        Map<String, Object> campos = new LinkedHashMap<>();
+        campos.put("nome", c.getNome());
+        campos.put("telefone", c.getTelefone());
+        campos.put("cep", c.getCep());
+        campos.put("logradouro", c.getLogradouro());
+        campos.put("numero", c.getNumero());
+        campos.put("complemento", c.getComplemento());
+        campos.put("bairro", c.getBairro());
+        campos.put("cidade", c.getCidade());
+        campos.put("estado", c.getEstado());
+        return campos;
     }
 }

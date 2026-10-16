@@ -5,7 +5,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-/** Acesso ao usuário autenticado da requisição atual. */
+// Atalhos para saber quem está logado e qual o perfil
 public final class UsuarioLogado {
 
     private UsuarioLogado() {

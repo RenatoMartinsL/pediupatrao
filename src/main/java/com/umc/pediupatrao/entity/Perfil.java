@@ -1,8 +1,6 @@
 package com.umc.pediupatrao.entity;
 
-/**
- * Perfis de acesso do sistema. O nome do perfil vira a role do Spring Security (ROLE_ADMIN, ...).
- */
+// Perfis de acesso. No Spring Security viram ROLE_ADMIN, ROLE_GERENTE e ROLE_ATENDENTE.
 public enum Perfil {
     ADMIN("Administrador"),
     GERENTE("Gerente"),
@@ -18,7 +16,7 @@ public enum Perfil {
         return descricao;
     }
 
-    /** Converte o texto salvo no banco; retorna null para valores desconhecidos (ex.: o antigo "USER"). */
+    // Converte o texto do banco em Perfil (devolve null se for inválido, como o antigo "USER")
     public static Perfil deTexto(String valor) {
         if (valor == null) {
             return null;

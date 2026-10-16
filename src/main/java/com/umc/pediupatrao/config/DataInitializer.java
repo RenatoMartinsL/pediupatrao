@@ -12,10 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-/**
- * Dados iniciais para desenvolvimento e demonstração: um usuário de cada perfil
- * e um cardápio básico. Senhas de teste documentadas no README (troque em produção).
- */
+// Cria um usuário de cada perfil e um cardápio de exemplo na primeira execução
 @Configuration
 public class DataInitializer {
 

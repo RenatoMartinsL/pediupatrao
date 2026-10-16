@@ -2,6 +2,6 @@ package com.umc.pediupatrao.dto;
 
 import java.math.BigDecimal;
 
-/** Desconto percentual (0 a 20) aplicado pelo GERENTE. */
+// Corpo da requisição de desconto
 public record DescontoRequest(BigDecimal percentual, String justificativa) {
 }

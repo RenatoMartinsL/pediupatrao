@@ -4,10 +4,8 @@ import com.umc.pediupatrao.entity.RegistroAuditoria;
 import java.util.List;
 import org.springframework.data.repository.Repository;
 
-/**
- * Repositório "somente inclusão": estende apenas Repository (e não MongoRepository),
- * de modo que não existem métodos de exclusão nem de alteração em lote disponíveis.
- */
+// Estende Repository (e não MongoRepository) para não herdar delete nem update:
+// só é possível incluir e consultar.
 public interface AuditoriaRepository extends Repository<RegistroAuditoria, String> {
 
     RegistroAuditoria insert(RegistroAuditoria registro);

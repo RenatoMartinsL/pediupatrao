@@ -7,7 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/** API de usuários: somente ADMIN. A senha nunca é devolvida (campo write-only). */
+// API de usuários (só ADMIN)
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuarioController {

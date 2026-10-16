@@ -25,13 +25,8 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 
-/**
- * Autorização por perfil em duas camadas:
- * 1) regras de URL abaixo (rotas de tela e APIs);
- * 2) @PreAuthorize nos serviços (@EnableMethodSecurity), que protege a regra mesmo se uma rota nova for criada.
- * CSRF fica ATIVO: formulários Thymeleaf recebem o token automaticamente e as chamadas fetch
- * enviam o cabeçalho X-CSRF-TOKEN (ver layout.html).
- */
+// Quem pode acessar cada rota. Os serviços também checam com @PreAuthorize
+// (ativado pelo @EnableMethodSecurity), então a regra vale mesmo que alguém chame direto.
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -67,7 +62,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // Token CSRF disponível já na renderização da página (necessário para as meta tags do layout)
+        // carrega o token CSRF já ao montar a página, para ele ir nas meta tags do layout.html
         CsrfTokenRequestAttributeHandler csrfHandler = new CsrfTokenRequestAttributeHandler();
         csrfHandler.setCsrfRequestAttributeName(null);
 
@@ -80,7 +75,7 @@ public class SecurityConfig {
                         // Usuários e perfis: somente ADMIN
                         .requestMatchers("/usuarios/**", "/api/usuarios/**").hasRole(ADMIN)
 
-                        // Auditoria: somente ADMIN e GERENTE (e apenas leitura: não há rotas de escrita)
+                        // Auditoria: ADMIN e GERENTE, só leitura
                         .requestMatchers(HttpMethod.GET, "/auditoria/**", "/api/auditoria/**").hasAnyRole(ADMIN, GERENTE)
                         .requestMatchers("/auditoria/**", "/api/auditoria/**").denyAll()
 
@@ -105,7 +100,7 @@ public class SecurityConfig {
                         .requestMatchers("/produtos/**", "/api/produtos/**").hasAnyRole(ADMIN, GERENTE)
 
                         .requestMatchers("/").authenticated()
-                        // Qualquer outra rota (ex.: páginas de exemplo do projeto base) fica bloqueada
+                        // qualquer rota não listada acima fica só para o ADMIN
                         .anyRequest().hasRole(ADMIN)
                 )
                 .formLogin(form -> form
@@ -136,7 +131,7 @@ public class SecurityConfig {
         };
     }
 
-    /** APIs respondem 401 em JSON; telas redirecionam para o login. */
+    // APIs respondem 401 em JSON; telas redirecionam para o login.
     private AuthenticationEntryPoint entryPoint() {
         LoginUrlAuthenticationEntryPoint login = new LoginUrlAuthenticationEntryPoint("/login");
         return (request, response, authException) -> {
@@ -148,7 +143,7 @@ public class SecurityConfig {
         };
     }
 
-    /** APIs respondem 403 em JSON; telas mostram a página de acesso negado. */
+    // APIs respondem 403 em JSON; telas mostram a página de acesso negado.
     private AccessDeniedHandler accessDeniedHandler() {
         return (request, response, accessDeniedException) -> {
             if (isApi(request)) {

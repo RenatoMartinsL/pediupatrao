@@ -11,10 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * API REST de pedidos. As permissões são verificadas no SecurityConfig e novamente no PedidoService.
- * O corpo das requisições não aceita preço, desconto ou total: tudo é calculado no servidor.
- */
+// API REST de pedidos
 @RestController
 @RequestMapping("/api/pedidos")
 public class PedidoController {

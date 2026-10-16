@@ -56,14 +56,17 @@ public class Cliente {
     public String getEndereco() { return endereco; }
     public void setEndereco(String endereco) { this.endereco = endereco; }
 
-    /** Endereço em uma linha, para exibição (usa o campo legado se o endereço completo estiver vazio). */
+    // Endereço em uma linha, para mostrar na lista de clientes
     public String getEnderecoFormatado() {
-        String partes = java.util.stream.Stream.of(logradouro, numero, complemento, bairro, cidade, estado)
-                .filter(p -> p != null && !p.isBlank())
-                .collect(java.util.stream.Collectors.joining(", "));
-        if (!partes.isEmpty()) {
-            return partes;
+        java.util.List<String> partes = new java.util.ArrayList<>();
+        for (String parte : new String[] {logradouro, numero, complemento, bairro, cidade, estado}) {
+            if (parte != null && !parte.isBlank()) {
+                partes.add(parte);
+            }
         }
-        return endereco != null && !endereco.isBlank() ? endereco : "—";
+        if (!partes.isEmpty()) {
+            return String.join(", ", partes);
+        }
+        return endereco != null ? endereco : "";
     }
 }

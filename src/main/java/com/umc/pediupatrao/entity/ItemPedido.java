@@ -2,10 +2,7 @@ package com.umc.pediupatrao.entity;
 
 import java.math.BigDecimal;
 
-/**
- * Item de um pedido. O preço unitário é copiado do produto no momento do registro,
- * para que mudanças futuras de preço não alterem pedidos antigos.
- */
+// Item do pedido. O preço é copiado do produto na hora, para o pedido não mudar se o cardápio mudar.
 public class ItemPedido {
 
     private String produtoId;

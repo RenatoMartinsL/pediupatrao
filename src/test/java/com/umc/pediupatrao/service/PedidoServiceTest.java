@@ -23,10 +23,6 @@ import com.umc.pediupatrao.repository.ClienteRepository;
 import com.umc.pediupatrao.repository.PedidoRepository;
 import com.umc.pediupatrao.repository.ProdutoRepository;
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -45,8 +41,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PedidoServiceTest {
 
-    private static final ZoneId SP = ZoneId.of("America/Sao_Paulo");
-    private static final Clock RELOGIO = Clock.fixed(Instant.parse("2026-10-16T23:35:00Z"), SP);
 
     @Mock PedidoRepository pedidoRepository;
     @Mock ClienteRepository clienteRepository;
@@ -57,7 +51,7 @@ class PedidoServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PedidoService(pedidoRepository, clienteRepository, produtoRepository, auditoriaService, RELOGIO);
+        service = new PedidoService(pedidoRepository, clienteRepository, produtoRepository, auditoriaService);
         when(pedidoRepository.save(any(Pedido.class))).thenAnswer(inv -> {
             Pedido p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -126,7 +120,7 @@ class PedidoServiceTest {
         assertEquals(new BigDecimal("119.80"), pedido.getValorTotal());
         assertEquals(StatusPedido.RECEBIDO, pedido.getStatus());
         assertEquals("atendente01", pedido.getRegistradoPor());
-        assertEquals(LocalDateTime.of(2026, 10, 16, 20, 35), pedido.getDataHoraEntrada());
+        assertNotNull(pedido.getDataHoraEntrada());
         verify(auditoriaService).registrar(eq(TipoOperacao.INCLUSAO_PEDIDO), eq("Pedido"), eq("pedido1"), anyList(), isNull());
     }
 

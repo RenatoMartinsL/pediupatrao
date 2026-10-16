@@ -3,11 +3,8 @@ package com.umc.pediupatrao.entity;
 import java.util.EnumSet;
 import java.util.Set;
 
-/**
- * Fluxo obrigatório do pedido:
- * RECEBIDO -> EM_PREPARACAO -> PRONTO -> (SAIU_PARA_ENTREGA | RETIRADO) -> FINALIZADO.
- * CANCELADO é excepcional: só antes da saída e somente pelo GERENTE (ver PedidoService.cancelar).
- */
+// Fluxo do pedido: RECEBIDO, EM_PREPARACAO, PRONTO, SAIU_PARA_ENTREGA ou RETIRADO, FINALIZADO.
+// CANCELADO fica fora do fluxo normal (ver PedidoService.cancelar).
 public enum StatusPedido {
     RECEBIDO("Recebido"),
     EM_PREPARACAO("Em preparação"),
@@ -27,7 +24,7 @@ public enum StatusPedido {
         return descricao;
     }
 
-    /** Próximos status permitidos no fluxo normal (sem o cancelamento). */
+    // Para quais status o pedido pode ir a partir do atual
     public Set<StatusPedido> proximos() {
         return switch (this) {
             case RECEBIDO -> EnumSet.of(EM_PREPARACAO);
@@ -42,12 +39,12 @@ public enum StatusPedido {
         return destino != null && proximos().contains(destino);
     }
 
-    /** Saída = pedido deixou a pizzaria (entrega ou retirada). */
+    // O pedido saiu da pizzaria (entrega ou retirada)
     public boolean isSaida() {
         return this == SAIU_PARA_ENTREGA || this == RETIRADO;
     }
 
-    /** Enquanto o pedido não saiu, ainda pode receber desconto ou ser cancelado. */
+    // Ainda não saiu: pode receber desconto ou ser cancelado
     public boolean isAntesDaSaida() {
         return this == RECEBIDO || this == EM_PREPARACAO || this == PRONTO;
     }

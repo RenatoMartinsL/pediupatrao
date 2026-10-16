@@ -4,32 +4,24 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.PersistenceCreator;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-/**
- * Registro de auditoria. É imutável: não possui setters e o repositório
- * não expõe operações de alteração ou exclusão.
- */
+// Registro de auditoria. Os campos são final e não há setters: depois de gravado, não muda mais.
 @Document(collection = "auditoria")
 public class RegistroAuditoria {
 
     @Id
     private final String id;
-    @Indexed
     private final String usuario;
     private final String perfil;
-    @Indexed
     private final LocalDateTime dataHora;
     private final TipoOperacao operacao;
-    @Indexed
-    private final String entidade;
-    @Indexed
+    private final String entidade;     // Pedido, Cliente ou Usuario
     private final String entidadeId;
     private final List<CampoAlterado> alteracoes;
     private final String justificativa;
 
-    @PersistenceCreator
+    @PersistenceCreator // construtor que o Spring usa ao ler do MongoDB
     public RegistroAuditoria(String id, String usuario, String perfil, LocalDateTime dataHora,
             TipoOperacao operacao, String entidade, String entidadeId,
             List<CampoAlterado> alteracoes, String justificativa) {
@@ -44,14 +36,6 @@ public class RegistroAuditoria {
         this.justificativa = justificativa;
     }
 
-    /** Novo registro (o id é gerado pelo MongoDB). */
-    public static RegistroAuditoria novo(String usuario, String perfil, LocalDateTime dataHora,
-            TipoOperacao operacao, String entidade, String entidadeId,
-            List<CampoAlterado> alteracoes, String justificativa) {
-        return new RegistroAuditoria(null, usuario, perfil, dataHora, operacao, entidade,
-                entidadeId, alteracoes, justificativa);
-    }
-
     public String getId() { return id; }
     public String getUsuario() { return usuario; }
     public String getPerfil() { return perfil; }
@@ -62,7 +46,7 @@ public class RegistroAuditoria {
     public List<CampoAlterado> getAlteracoes() { return alteracoes; }
     public String getJustificativa() { return justificativa; }
 
-    /** Campo modificado com seus valores anterior e novo. */
+    // Um campo que mudou: nome, valor antigo e valor novo
     public record CampoAlterado(String campo, String valorAnterior, String valorNovo) {
     }
 }

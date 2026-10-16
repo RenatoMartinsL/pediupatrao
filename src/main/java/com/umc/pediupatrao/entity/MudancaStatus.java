@@ -2,7 +2,7 @@ package com.umc.pediupatrao.entity;
 
 import java.time.LocalDateTime;
 
-/** Linha do histórico de status do pedido (quem mudou e quando). */
+// Uma linha do histórico: qual status, quando e quem mudou
 public class MudancaStatus {
 
     private StatusPedido status;
